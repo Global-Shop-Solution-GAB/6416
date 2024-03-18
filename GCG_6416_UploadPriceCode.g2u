@@ -1,0 +1,160 @@
+﻿Program.Sub.ScreenSU.Start
+Gui.frmPrice..Create(BaseForm)
+Gui.frmPrice..Caption("Form")
+Gui.frmPrice..Size(468,720)
+Gui.frmPrice..MinX(0)
+Gui.frmPrice..MinY(0)
+Gui.frmPrice..Position(0,0)
+Gui.frmPrice..AlwaysOnTop(False)
+Gui.frmPrice..FontName("Tahoma")
+Gui.frmPrice..FontSize(8.25)
+Gui.frmPrice..ControlBox(True)
+Gui.frmPrice..MaxButton(True)
+Gui.frmPrice..MinButton(True)
+Gui.frmPrice..MousePointer(0)
+Gui.frmPrice..Moveable(True)
+Gui.frmPrice..Sizeable(True)
+Gui.frmPrice..ShowInTaskBar(True)
+Gui.frmPrice..TitleBar(True)
+Gui.frmPrice..Event(UnLoad,frmPrice_UnLoad)
+Gui.frmPrice.cmdBrowse.Create(Button)
+Gui.frmPrice.cmdBrowse.Enabled(True)
+Gui.frmPrice.cmdBrowse.Visible(True)
+Gui.frmPrice.cmdBrowse.Zorder(0)
+Gui.frmPrice.cmdBrowse.Size(42,23)
+Gui.frmPrice.cmdBrowse.Position(273,6)
+Gui.frmPrice.cmdBrowse.Caption("^")
+Gui.frmPrice.cmdBrowse.FontName("Tahoma")
+Gui.frmPrice.cmdBrowse.FontSize(7.8)
+Gui.frmPrice.cmdBrowse.Event(Click,cmdBrowse_Click)
+Gui.frmPrice.txtBrowse.Create(TextBox,"",True,250,22,0,18,8,True,0,"Tahoma",7.8,,1)
+Gui.frmPrice.txtBrowse.Locked(True)
+Gui.frmPrice.cmdUpload.Create(Button)
+Gui.frmPrice.cmdUpload.Enabled(True)
+Gui.frmPrice.cmdUpload.Visible(False)
+Gui.frmPrice.cmdUpload.Zorder(0)
+Gui.frmPrice.cmdUpload.Size(94,29)
+Gui.frmPrice.cmdUpload.Position(339,7)
+Gui.frmPrice.cmdUpload.Caption("Upload")
+Gui.frmPrice.cmdUpload.FontName("Tahoma")
+Gui.frmPrice.cmdUpload.FontSize(7.8)
+Gui.frmPrice.cmdUpload.Event(Click,cmdUpload_Click)
+Gui.frmPrice.GsGrid.Create(GsGridControl)
+Gui.frmPrice.GsGrid.Enabled(True)
+Gui.frmPrice.GsGrid.Visible(True)
+Gui.frmPrice.GsGrid.Zorder(0)
+Gui.frmPrice.GsGrid.Size(421,615)
+Gui.frmPrice.GsGrid.Position(24,47)
+Program.Sub.ScreenSU.End
+
+Program.Sub.Preflight.Start
+Program.Sub.Preflight.End
+
+Program.Sub.Main.Start
+Function.Intrinsic.UI.UsePixels ' Allows you to use Pixels instead of Twips throughout
+
+	gui.frmPrice..Show
+Program.Sub.Main.End
+Program.Sub.cmdUpload_Click.Start
+f.Intrinsic.Control.Try
+'	update v_CUST_FORM_INFO set Primary_Group = 'DE' where customer = '100001'
+
+F.Intrinsic.UI.InvokeWaitDialog("Uploading data ........")
+
+	f.Data.DataView.Create("DtExport","DVSave",22,"CMatch='Y'","")
+	
+	f.Data.DataView.ToDataTable("DtExport","DVSave","DTSave")
+	F.Data.DataTable.SaveToDB("DTSave","con","v_CUST_FORM_INFO","Cust",256,"Cust@!@customer*!*PriceListCode@!@Primary_Group")
+	
+	
+	f.Data.Datatable.Close("DtExport")
+	f.Data.Datatable.Close("DTSave")
+	
+	F.Intrinsic.UI.CloseWaitDialog
+
+	f.Intrinsic.UI.Msgbox("Price Code saved successfully")
+	
+	F.ODBC.Connection!con.Close
+	
+	f.Intrinsic.Control.CallSub(frmPrice_UnLoad)
+	
+f.Intrinsic.Control.Catch
+	f.Intrinsic.Control.CallSub(ErrorMsg, CurrentSub, v.Ambient.CurrentSubroutine)
+	f.Intrinsic.Control.EndTry
+Program.Sub.cmdUpload_Click.End
+
+Program.Sub.frmPrice_UnLoad.Start
+	f.Intrinsic.Control.End
+Program.Sub.frmPrice_UnLoad.End
+
+Program.Sub.cmdBrowse_Click.Start
+f.Intrinsic.Control.Try
+
+v.Local.sRet.Declare
+v.Local.sRet1.Declare
+V.Local.sFile.Declare
+V.Local.sRow.Declare
+
+	F.Intrinsic.UI.ShowOpenFileDialog("","xls|*.*",V.Local.sFile)
+	gui.frmPrice.txtBrowse.Text(v.Local.sFile)
+
+F.Intrinsic.UI.InvokeWaitDialog("Importing data ........")
+Function.Automation.MSExcel.CreateAppObject("EXCEL")
+		Function.Automation.MSExcel.OpenWorkbook("EXCEL","BOOK",V.Local.sFile)
+		Function.Automation.MSExcel.OpenWorksheet("BOOK","SHEET",1)
+	
+		F.Automation.MSExcel.ReadSpreadsheet(V.Local.sFile,3,,V.Local.sRow)
+		
+		F.Automation.Generic.DestroyObject("SHEET")
+		F.Automation.Generic.DestroyObject("BOOK")
+		F.Automation.Generic.DestroyObject("EXCEL")
+		
+		
+		F.Intrinsic.Control.If(v.DataTable.DtExport.Exists,=,True)
+			F.Data.DataTable.Close("DtExport")
+		f.Intrinsic.Control.Else
+			F.ODBC.Connection!con.OpenCompanyConnection(300)
+		f.Intrinsic.Control.EndIf 
+
+		f.Data.Datatable.CreateFromString("DtExport",V.Local.sRow,"Cust*!*Name*!*PriceListCode","string*!*string*!*string","*!*","$!$",true)
+		f.Data.Datatable.DeleteRow("DtExport",0)
+		F.Data.DataView.Create("DtExport","DVExport")
+		
+		f.Intrinsic.Control.If(v.DataTable.DtExport.RowCount,>,0)
+			gui.frmPrice.cmdUpload.Visible(true)
+		f.Intrinsic.Control.EndIf
+		
+		f.Data.Datatable.AddColumn("DtExport","CMatch","String","N")
+		
+		F.Data.Dictionary.CreateFromSql("dtXdic","con","select rtrim(Customer),'Y' from CUSTOMER_MASTER")
+		f.Data.Dictionary.SetDefaultReturn("dtXdic","")
+		f.Data.DataTable.FillFromDictionary("DtExport","dtXdic","Cust","CMatch")
+		f.Data.Dictionary.Close("dtXdic")
+	
+		
+	
+		gui.frmPrice.GsGrid.AddGridViewFromDataView("GridView","DtExport","DVExport")
+		
+		gui.frmPrice.GsGrid.SetGridViewProperty("GridView","OptionsViewShowAutoFilterRow",True)
+		gui.frmPrice.GsGrid.MainView("GridView")
+		
+		
+		F.Intrinsic.UI.CloseWaitDialog
+
+
+f.Intrinsic.Control.Catch
+	f.Intrinsic.Control.CallSub(ErrorMsg, CurrentSub, v.Ambient.CurrentSubroutine)
+	f.Intrinsic.Control.EndTry
+Program.Sub.cmdBrowse_Click.End
+
+Program.Sub.ErrorMsg.Start
+v.Local.sError.Declare
+
+f.Intrinsic.String.Build("Project GCG_6416_ARTerms.g2u {0}{0}Subroutine: {1}{0}Error: {2} with Description: {3}", v.Ambient.NewLine, v.Args.CurrentSub, v.Ambient.ErrorNumber, v.Ambient.ErrorDescription, v.Local.sError)
+f.Intrinsic.UI.Msgbox(v.Local.sError)
+Program.Sub.ErrorMsg.End
+
+Program.Sub.Comments.Start
+${$5$}$3.0.0.0$}$1
+${$6$}$rnair$}$20210702111314245$}$JUGEdtlNdgRUPvge2DQ26bz/1piQWHOnsK2g9JcMWJ2J2dPoD5yn+EK3SVJjmw5vSR5pQ46ZktA=
+Program.Sub.Comments.End
